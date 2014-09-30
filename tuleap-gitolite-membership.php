@@ -25,7 +25,7 @@ use TuleapClient\Gitolite\MembershipCommand;
 use TuleapClient\Gitolite\ConfigurationLoader;
 use Guzzle\Http\Client;
 
-$membership = new MembershipApplication('Tuleap/Gitolite Membership', '0.1');
+$membership = new MembershipApplication('Tuleap/Gitolite Membership', file_get_contents(dirname(__FILE__).'/VERSION'));
 $membership->add(
     new MembershipCommand(
         new Client(),

@@ -53,3 +53,13 @@ Make sure that dev dependencies (phpunit) has been installed and issue the follo
 ```bash
 $ vendor/bin/phpunit --coverage-html=/tmp/cov/
 ```
+
+### Build rpms and run tests
+
+In order to build the packages, you need to run:
+
+```bash
+$ make world JOB_NAME=dev WORKSPACE=$PWD
+```
+
+The result is in /output
