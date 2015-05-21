@@ -28,6 +28,8 @@ user = admin
 password = adminpwd
 [client]
 cache = /path/to/file
+keydir_path = /path/to/keydir
+membership_cache = /path/to/membership_cache
 
 EOS;
 

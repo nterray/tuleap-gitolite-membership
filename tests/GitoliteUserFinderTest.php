@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) Enalean, 2014 - 2015. All Rights Reserved.
+ * Copyright (c) Enalean, 2015. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -19,20 +19,28 @@
 
 namespace TuleapClient\Gitolite;
 
-class ClientConfiguration {
+class GitoliteUserFinderTest extends \PHPUnit_Framework_TestCase {
 
     /** @var string */
-    public $cache;
+    private $keydir_path;
 
-    /** @var string */
-    public $keydir_path;
+    /** @var GitoliteUserFinder */
+    private $finder;
 
-    /** @var string */
-    public $membership_cache;
+    public function setUp() {
+        parent::setUp();
 
-    public function __construct($cache, $keydir_path, $membership_cache) {
-        $this->cache            = $cache;
-        $this->keydir_path      = $keydir_path;
-        $this->membership_cache = $membership_cache;
+        $this->keydir_path = __DIR__ .'/_fixtures/keydir';
+        $this->finder      = new GitoliteUserFinder();
     }
+
+    public function testItReturnsUniqueUsernamesFromKeydirPath() {
+        $expect_result = "user01,user02,user03,user04";
+        $result        = $this->finder->getUserFromGitoliteKeydirPath(
+            $this->keydir_path
+        );
+
+        $this->assertEquals($result, $expect_result);
+    }
+
 }

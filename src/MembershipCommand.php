@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) Enalean, 2014. All Rights Reserved.
+ * Copyright (c) Enalean, 2014 - 2015. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -67,7 +67,7 @@ class MembershipCommand extends Command {
             ->setDescription('Retrieve the membership of a given user')
             ->addArgument(
                 'username',
-                InputArgument::REQUIRED,
+                InputArgument::OPTIONAL,
                 'The user to retrieve membership information'
             )
             ->addOption(
@@ -75,6 +75,12 @@ class MembershipCommand extends Command {
                 'k',
                 InputOption::VALUE_NONE,
                 'Allow connections to SSL sites without certs'
+            )
+            ->addOption(
+                'create-cache',
+                'c',
+                InputOption::VALUE_NONE,
+                'Create a user membership cache'
             );
     }
 
@@ -84,19 +90,27 @@ class MembershipCommand extends Command {
         try {
             $server_config = $this->loader->getServerConfiguration($this->config_file);
             $client_config = $this->loader->getClientConfiguration($this->config_file);
+            $finder        = new GitoliteUserFinder();
 
             $membership = new MembershipGoldenRetriever(
                 $this->client,
                 $server_config,
                 $client_config,
-                $logger
+                $logger,
+                $finder
             );
 
             if ($input->getOption('insecure')) {
                 $logger->debug('Allowing connections to SSL sites without certs');
             }
 
-            return $membership->displayMembership($input, $output);
+
+            if ($input->getArgument('username')) {
+                return $membership->displayMembership($input, $output);
+            } else if($input->getOption('create-cache')) {
+                return $membership->generateCache($input, $output);
+            }
+
         } catch (CurlException $exception) {
             if ($exception->getErrorNo() == CURLE_SSL_CACERT) {
                 $logger->debug('Peer certificate cannot be authenticated with known CA certificates.');

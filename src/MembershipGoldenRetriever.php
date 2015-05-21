@@ -50,6 +50,11 @@ class MembershipGoldenRetriever {
     private $client_configuration;
 
     /**
+     * @var GitoliteUserFinder
+     */
+    private $finder;
+
+    /**
      * @var int
      */
     private $nb_attempt = 0;
@@ -68,14 +73,82 @@ class MembershipGoldenRetriever {
         Client $client,
         ServerConfiguration $server_config,
         ClientConfiguration $client_configuration,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        GitoliteUserFinder $finder
     ) {
         $this->server_configuration = $server_config;
         $this->client_configuration = $client_configuration;
 
+        $this->finder = $finder;
         $this->client = $client;
         $this->logger = $logger;
         $this->setTokenFromCache();
+    }
+
+    public function generateCache(InputInterface $input, OutputInterface $output) {
+        $users = $this->finder->getUserFromGitoliteKeydirPath(
+            $this->client_configuration->keydir_path
+        );
+
+        $limit  = 1000;
+        $offset = 0;
+        $max    = 0;
+
+        try {
+            $this->nb_attempt++;
+
+            $users_groups = array();
+            do {
+                $response     = $this->getAllMembershipInformationForCache($input, $users, $limit, $offset);
+                $users_groups = array_merge($users_groups, $response->json());
+
+                $headers = $response->getHeader('X-PAGINATION-SIZE')->toArray();
+                if (! isset($headers[0])) {
+                    throw new Exception('Header X-PAGINATION-SIZE not found');
+                }
+
+                $max = (int) $headers[0];
+                $offset += $limit;
+            } while ($offset < $max);
+
+            $this->generateMembershipCache($users_groups);
+
+        } catch (ClientErrorResponseException $exception) {
+            $status_code = $exception->getResponse()->getStatusCode();
+            if ($status_code == 401 && $this->nb_attempt < self::NB_MAX_ATTEMPT) {
+                $this->generateNewToken($input, $output);
+                return $this->generateCache($input, $output);
+            } else {
+                throw $exception;
+            }
+        }
+
+        return 0;
+    }
+
+    private function getAllMembershipInformationForCache(
+        InputInterface $input,
+        $users,
+        $limit,
+        $offset
+    ) {
+        $url = "/api/v1/users_memberships?limit=$limit&offset=$offset&users=$users";
+        $this->logger->debug('GET '. $url);
+        $response = $this->client->get(
+            $this->server_configuration->host . $url,
+            $this->getHeadersForRESTRequests(),
+            $this->getOptionsForRESTRequests($input)
+        )->send();
+        $this->logger->debug('Raw response from the server: '. $response->getBody());
+
+        return $response;
+    }
+
+    private function generateMembershipCache(array $users_groups) {
+        file_put_contents(
+            $this->client_configuration->membership_cache,
+            json_encode($users_groups)
+        );
     }
 
     public function displayMembership(InputInterface $input, OutputInterface $output) {
@@ -88,7 +161,8 @@ class MembershipGoldenRetriever {
         } catch (ClientErrorResponseException $exception) {
             $status_code = $exception->getResponse()->getStatusCode();
             if ($status_code == 401 && $this->nb_attempt < self::NB_MAX_ATTEMPT) {
-                return $this->generateNewToken($input, $output);
+                $this->generateNewToken($input, $output);
+                return $this->displayMembership($input, $output);
             } else {
                 throw $exception;
             }
@@ -159,8 +233,6 @@ class MembershipGoldenRetriever {
         $this->setTokenFromJson($json);
 
         $this->storeTokenForFutureUse($json);
-
-        return $this->displayMembership($input, $output);
     }
 
     private function setTokenFromCache() {

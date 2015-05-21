@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) Enalean, 2014. All Rights Reserved.
+ * Copyright (c) Enalean, 2014 - 2015. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,12 +49,14 @@ class ConfigurationLoader {
         $this->checkVarsAreDefined(
             $config,
             'client',
-            array('cache'),
+            array('cache', 'keydir_path', 'membership_cache'),
             $filename
         );
 
         return new ClientConfiguration(
-            $config['client']['cache']
+            $config['client']['cache'],
+            $config['client']['keydir_path'],
+            $config['client']['membership_cache']
         );
     }
 
