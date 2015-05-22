@@ -155,8 +155,13 @@ class MembershipGoldenRetriever {
         $username = $this->getUsername($input);
 
         try {
-            $this->nb_attempt++;
-            $user_groups = $this->getMembershipInformation($input, $username);
+            if ($this->client_configuration->use_cache) {
+                $user_groups = $this->getMembershipInformationFromCache($username);
+            } else {
+                $this->nb_attempt++;
+                $user_groups = $this->getMembershipInformation($input, $username);
+            }
+
             $output->writeln(implode(' ', $user_groups));
         } catch (ClientErrorResponseException $exception) {
             $status_code = $exception->getResponse()->getStatusCode();
@@ -170,6 +175,18 @@ class MembershipGoldenRetriever {
             $this->logger->debug('User does not exist.');
         }
         return 0;
+    }
+
+    private function getMembershipInformationFromCache($username) {
+            $memberships = file_get_contents($this->client_configuration->membership_cache);
+
+            foreach (json_decode($memberships) as $user) {
+                if ($user->username == $username) {
+                    return $user->user_groups;
+                }
+            }
+
+            throw new UserNotFoundException();
     }
 
     private function getMembershipInformation(InputInterface $input, $username) {

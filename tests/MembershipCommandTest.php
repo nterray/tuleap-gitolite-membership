@@ -75,6 +75,9 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
     /** @var string */
     private $membership_cache;
 
+    /** @var string */
+    private $original_config_file_content;
+
     public function setUp() {
         parent::setUp();
         $this->plugin = new MockPlugin();
@@ -88,7 +91,7 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
         $this->keydir_path      = $this->fixture_dir .'/keydir';
         $this->membership_cache = $this->fixture_dir .'/users.json';
 
-        $this->createConfigFile();
+        $this->original_config_file_content = $this->createConfigFile();
 
         $this->command = new MembershipCommand(
             $client,
@@ -156,6 +159,14 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
                 "user_groups": [
                     "site_active"
                 ]
+              },
+              {
+                "username": "jcdusse",
+                "user_groups": [
+                    "site_active",
+                    "tuleap_project_members",
+                    "tuleap_project_admin"
+                ]
               }
             ]';
 
@@ -202,6 +213,14 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
                 "user_groups": [
                     "site_active"
                 ]
+              },
+              {
+                "username": "jcdusse",
+                "user_groups": [
+                    "site_active",
+                    "tuleap_project_members",
+                    "tuleap_project_admin"
+                ]
               }
             ]'
         );
@@ -244,6 +263,8 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
         );
 
         file_put_contents($this->config_file, $content_with_keydir_and_users_file);
+
+        return $content_with_keydir_and_users_file;
     }
 
     private function executeCommand($insecure = true) {
@@ -437,5 +458,37 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
             json_decode($this->users_memberships_response_content),
             json_decode(file_get_contents($this->membership_cache))
         );
+    }
+
+    public function testItReadMembershipFromCache() {
+        $this->updateConfigFileToUseCache();
+        $this->generateMembershipCacheFile();
+
+        $command_tester = $this->executeCommand();
+        $expected_output = "site_active tuleap_project_members tuleap_project_admin\n";
+        $this->assertEquals($expected_output, $command_tester->getDisplay());
+        $this->assertEquals(0, $command_tester->getStatusCode());
+
+        $this->restoreConfigFile();
+    }
+
+    private function updateConfigFileToUseCache() {
+        $origin = file_get_contents($this->config_file);
+
+        $content = str_replace(
+            'use_cache = false',
+            'use_cache = true',
+            $origin
+        );
+
+        file_put_contents($this->config_file, $content);
+    }
+
+    private function restoreConfigFile() {
+        file_put_contents($this->config_file, $this->original_config_file_content);
+    }
+
+    private function generateMembershipCacheFile() {
+        file_put_contents($this->membership_cache, $this->users_memberships_response_content);
     }
 }

@@ -30,9 +30,13 @@ class ClientConfiguration {
     /** @var string */
     public $membership_cache;
 
-    public function __construct($cache, $keydir_path, $membership_cache) {
+    /** @var boolean */
+    public $use_cache;
+
+    public function __construct($cache, $keydir_path, $membership_cache, $use_cache) {
         $this->cache            = $cache;
         $this->keydir_path      = $keydir_path;
         $this->membership_cache = $membership_cache;
+        $this->use_cache        = (bool) $use_cache;
     }
 }

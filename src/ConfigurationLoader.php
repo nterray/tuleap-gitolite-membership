@@ -49,14 +49,16 @@ class ConfigurationLoader {
         $this->checkVarsAreDefined(
             $config,
             'client',
-            array('cache', 'keydir_path', 'membership_cache'),
+            array('cache', 'keydir_path', 'membership_cache', 'use_cache'),
             $filename
         );
 
         return new ClientConfiguration(
             $config['client']['cache'],
             $config['client']['keydir_path'],
-            $config['client']['membership_cache']
+            $config['client']['membership_cache'],
+            $config['client']['use_cache']
+
         );
     }
 
