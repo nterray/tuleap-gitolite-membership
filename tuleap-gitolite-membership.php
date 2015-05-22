@@ -20,17 +20,26 @@
 
 require 'vendor/autoload.php';
 
-use TuleapClient\Gitolite\MembershipApplication;
-use TuleapClient\Gitolite\MembershipCommand;
+use Symfony\Component\Console\Application;
+use TuleapClient\Gitolite\MembershipRetrieveCommand;
+use TuleapClient\Gitolite\MembershipCacheCommand;
 use TuleapClient\Gitolite\ConfigurationLoader;
 use Guzzle\Http\Client;
 
-$membership = new MembershipApplication('Tuleap/Gitolite Membership', file_get_contents(dirname(__FILE__).'/VERSION'));
+$membership = new Application('Tuleap/Gitolite Membership', file_get_contents(dirname(__FILE__).'/VERSION'));
 $membership->add(
-    new MembershipCommand(
+    new MembershipRetrieveCommand(
         new Client(),
         new ConfigurationLoader(),
         '/etc/tuleap-gitolite-membership.ini'
     )
 );
+$membership->add(
+    new MembershipCacheCommand(
+        new Client(),
+        new ConfigurationLoader(),
+        '/etc/tuleap-gitolite-membership.ini'
+    )
+);
+
 $membership->run();

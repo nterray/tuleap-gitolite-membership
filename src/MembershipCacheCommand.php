@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) Enalean, 2014 - 2015. All Rights Reserved.
+ * Copyright (c) Enalean, 2015. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,15 +25,14 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Logger\ConsoleLogger;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\CurlException;
 use Exception;
 
-class MembershipCommand extends Command {
+class MembershipCacheCommand extends Command {
 
-    const NAME = 'tuleap-gitolite-membership';
+    const NAME = 'create-cache';
 
     /**
      * @var Client
@@ -64,23 +63,12 @@ class MembershipCommand extends Command {
 
     protected function configure() {
         $this->setName(self::NAME)
-            ->setDescription('Retrieve the membership of a given user')
-            ->addArgument(
-                'username',
-                InputArgument::OPTIONAL,
-                'The user to retrieve membership information'
-            )
+            ->setDescription('Generate membership cache')
             ->addOption(
                 'insecure',
                 'k',
                 InputOption::VALUE_NONE,
                 'Allow connections to SSL sites without certs'
-            )
-            ->addOption(
-                'create-cache',
-                'c',
-                InputOption::VALUE_NONE,
-                'Create a user membership cache'
             );
     }
 
@@ -92,7 +80,7 @@ class MembershipCommand extends Command {
             $client_config = $this->loader->getClientConfiguration($this->config_file);
             $finder        = new GitoliteUserFinder();
 
-            $membership = new MembershipGoldenRetriever(
+            $cache_generator = new MembershipCacheGenerator(
                 $this->client,
                 $server_config,
                 $client_config,
@@ -104,12 +92,7 @@ class MembershipCommand extends Command {
                 $logger->debug('Allowing connections to SSL sites without certs');
             }
 
-
-            if ($input->getArgument('username')) {
-                return $membership->displayMembership($input, $output);
-            } else if($input->getOption('create-cache')) {
-                return $membership->generateCache($input, $output);
-            }
+            return $cache_generator->generateCache($input, $output);
 
         } catch (CurlException $exception) {
             if ($exception->getErrorNo() == CURLE_SSL_CACERT) {

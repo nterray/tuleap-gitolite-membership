@@ -25,9 +25,9 @@ use Guzzle\Http\Message\Response;
 use Guzzle\Http\Exception\CurlException;
 use Guzzle\Plugin\Mock\MockPlugin;
 
-class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
+class MembershipRetrieveCommandTest extends \PHPUnit_Framework_TestCase {
 
-    /** @var MembershipCommand */
+    /** @var MembershipRetrieveCommand */
     private $command;
 
     /** @var MockPlugin */
@@ -51,14 +51,11 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
     /** @var Response */
     private $membership_response;
 
-    /** @var Response */
-    private $users_memberships_response_01;
-
-    /** @var Response */
-    private $users_memberships_response_02;
-
     /** @var string */
     private $users_memberships_response_content;
+
+    /** @var string */
+    private $users_memberships_content_with_unknown_user;
 
     /** @var string */
     private $fixture_dir;
@@ -71,9 +68,6 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
 
     /** @var string */
     private $keydir_path;
-
-    /** @var string */
-    private $membership_cache;
 
     /** @var string */
     private $original_config_file_content;
@@ -93,7 +87,7 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
 
         $this->original_config_file_content = $this->createConfigFile();
 
-        $this->command = new MembershipCommand(
+        $this->command = new MembershipRetrieveCommand(
             $client,
             new ConfigurationLoader(),
             $this->config_file
@@ -131,99 +125,40 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
         );
 
         $this->users_memberships_response_content = '
-            [{
-                "username": "user01",
-                "user_groups": [
+            {
+                "user01" : [
+                    "site_active",
+                    "project01_project_members",
+                    "project01_project_admin",
+                    "ug_101"
+                ],
+                "user02" : [
+                    "site_active",
+                    "project01_project_members"
+                ],
+                "user03" : [
+                    "site_active",
+                    "project01_project_members"
+                ],
+                "user04" : [
+                    "site_active"
+                ],
+                "jcdusse" : [
+                    "site_active",
+                    "tuleap_project_members",
+                    "tuleap_project_admin"
+                ]
+            }';
+
+        $this->users_memberships_content_with_unknown_user = '
+            {
+                "user01" : [
                     "site_active",
                     "project01_project_members",
                     "project01_project_admin",
                     "ug_101"
                 ]
-              },
-              {
-                "username": "user02",
-                "user_groups": [
-                    "site_active",
-                    "project01_project_members"
-                ]
-              },
-              {
-                "username": "user03",
-                "user_groups": [
-                    "site_active",
-                    "project01_project_members"
-                ]
-              },
-              {
-                "username": "user04",
-                "user_groups": [
-                    "site_active"
-                ]
-              },
-              {
-                "username": "jcdusse",
-                "user_groups": [
-                    "site_active",
-                    "tuleap_project_members",
-                    "tuleap_project_admin"
-                ]
-              }
-            ]';
-
-        $this->users_memberships_response_01 = new Response(
-            200,
-            array(
-                'Content-Type' => 'application/json',
-                'X-PAGINATION-SIZE' => '2000'
-            ),
-            '[{
-                "username": "user01",
-                "user_groups": [
-                    "site_active",
-                    "project01_project_members",
-                    "project01_project_admin",
-                    "ug_101"
-                ]
-              },
-              {
-                "username": "user02",
-                "user_groups": [
-                    "site_active",
-                    "project01_project_members"
-                ]
-              },
-              {
-                "username": "user03",
-                "user_groups": [
-                    "site_active",
-                    "project01_project_members"
-                ]
-              }
-            ]'
-        );
-
-        $this->users_memberships_response_02 = new Response(
-            200,
-            array(
-                'Content-Type' => 'application/json',
-                'X-PAGINATION-SIZE' => '2000'
-            ),
-            '[{
-                "username": "user04",
-                "user_groups": [
-                    "site_active"
-                ]
-              },
-              {
-                "username": "jcdusse",
-                "user_groups": [
-                    "site_active",
-                    "tuleap_project_members",
-                    "tuleap_project_admin"
-                ]
-              }
-            ]'
-        );
+            }';
     }
 
     protected function tearDown() {
@@ -279,18 +214,6 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
         return $command_tester;
     }
 
-    private function executeMemebershipCacheCommand($insecure = true) {
-        $command_tester = new CommandTester($this->command);
-        $command_tester->execute(
-            array(
-                '--create-cache' => true,
-                '--insecure'     => $insecure
-            )
-        );
-
-        return $command_tester;
-    }
-
     public function testItAsksToTheServerTheUserInformation() {
         $this->plugin->addResponse($this->user_info_response);
 
@@ -331,7 +254,7 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
     }
 
     public function testItFailsIfThereIsNoConfigFile() {
-        $this->command = new MembershipCommand(
+        $this->command = new MembershipRetrieveCommand(
             new Client(),
             new ConfigurationLoader(),
             '/path/to/inexistant/file.ini'
@@ -448,25 +371,24 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
         $this->assertCount(3, $this->plugin->getReceivedRequests());
     }
 
-    public function testItCreatesAMembershipCache() {
-        $this->plugin->addResponse($this->users_memberships_response_01);
-        $this->plugin->addResponse($this->users_memberships_response_02);
-
-        $this->executeMemebershipCacheCommand();
-
-        $this->assertEquals(
-            json_decode($this->users_memberships_response_content),
-            json_decode(file_get_contents($this->membership_cache))
-        );
-    }
-
-    public function testItReadMembershipFromCache() {
+    public function testItReadsMembershipFromCache() {
         $this->updateConfigFileToUseCache();
-        $this->generateMembershipCacheFile();
+        $this->generateMembershipCacheFile($this->users_memberships_response_content);
 
         $command_tester = $this->executeCommand();
         $expected_output = "site_active tuleap_project_members tuleap_project_admin\n";
         $this->assertEquals($expected_output, $command_tester->getDisplay());
+        $this->assertEquals(0, $command_tester->getStatusCode());
+
+        $this->restoreConfigFile();
+    }
+
+    public function testItFailsIfUserNotFoundInCache() {
+        $this->updateConfigFileToUseCache();
+        $this->generateMembershipCacheFile($this->users_memberships_content_with_unknown_user);
+
+        $command_tester = $this->executeCommand();
+        $this->assertEquals('', $command_tester->getDisplay());
         $this->assertEquals(0, $command_tester->getStatusCode());
 
         $this->restoreConfigFile();
@@ -488,7 +410,10 @@ class MembershipCommandTest extends \PHPUnit_Framework_TestCase {
         file_put_contents($this->config_file, $this->original_config_file_content);
     }
 
-    private function generateMembershipCacheFile() {
-        file_put_contents($this->membership_cache, $this->users_memberships_response_content);
+    private function generateMembershipCacheFile($content) {
+        file_put_contents(
+            $this->membership_cache,
+            $content
+        );
     }
 }

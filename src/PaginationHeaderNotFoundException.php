@@ -19,31 +19,7 @@
 
 namespace TuleapClient\Gitolite;
 
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Input\InputInterface;
+use Exception;
 
-class MembershipApplication extends Application {
-
-    /**
-     * Gets the name of the command based on input.
-     *
-     * @param InputInterface $input The input interface
-     *
-     * @return string The command name
-     */
-    protected function getCommandName(InputInterface $input) {
-        return MembershipCommand::NAME;
-    }
-
-    /**
-     * Overridden so that the application doesn't expect the command
-     * name to be the first argument.
-     */
-    public function getDefinition() {
-        $input_definition = parent::getDefinition();
-        // clear out the normal first argument, which is the command name
-        $input_definition->setArguments();
-
-        return $input_definition;
-    }
+class PaginationHeaderNotFoundException extends Exception {
 }

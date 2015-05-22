@@ -26,14 +26,14 @@ The tool outputs the same information as the old `gl-membership.pl`.
 
 ```bash
 # Basic usage
-$ ./tuleap-gitolite-membership.php nterray
+$ ./tuleap-gitolite-membership.php retrieve nterray
 > site_active tuleap_project_members tuleap_project_admin enalean_project_members
 
 # With a self-signed certificate
-$ ./tuleap-gitolite-membership.php --insecure nterray
+$ ./tuleap-gitolite-membership.php --insecure retrieve nterray
 
 # Debug mode
-$ ./tuleap-gitolite-membership.php --insecure nterray -vvv
+$ ./tuleap-gitolite-membership.php --insecure retrieve nterray -vvv
 > [debug] Reading token from cache.
 > [debug] Allowing connections to SSL sites without certs
 > [debug] Retrieving membership information for "nterray"
@@ -45,6 +45,16 @@ $ ./tuleap-gitolite-membership.php --insecure nterray -vvv
 # Display usage information
 $ ./tuleap-gitolite-membership.php --help
 ```
+
+#### Using cache
+In order to allow users to work with mirror while the master Tuleap is down (maintenance, …) you can activate cache.
+
+Edit `/etc/tuleap-gitolite-membership.ini` and enable cache (`use_cache`). Cache is not created/updated automatically for now. You have to generate it manually on a regular basis:
+```bash
+$ ./tuleap-gitolite-membership.php --insecure create-cache
+```
+
+See `tuleap-gitolite-membership.php create-cache --help` for details.
 
 ### Unit tests
 
